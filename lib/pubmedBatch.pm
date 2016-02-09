@@ -5,7 +5,6 @@ use warnings;
 use 5.16.0;
 use File::Spec;
 use Dancer2;
-use JSON;
 use POSIX qw(strftime);
 use Template;
 use Dancer2::Plugin::ProgressStatus;

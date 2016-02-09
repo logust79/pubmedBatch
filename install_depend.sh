@@ -11,6 +11,7 @@ if [ $ver -ge 16 ] ; then
 	sudo apt-get -qq update
 	cpan install App::cpanminus
 	cpanm BioPerl
+    cpanm Bio::DB::EUtilities
     cpanm Dancer2
 	cpanm Template
 	cpanm Try::Tiny
