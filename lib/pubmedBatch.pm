@@ -6,7 +6,6 @@ use 5.16.0;
 use File::Spec;
 use Dancer2;
 use JSON;
-use Bio::Seq;
 use POSIX qw(strftime);
 use Template;
 use Dancer2::Plugin::ProgressStatus;
