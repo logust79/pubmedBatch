@@ -265,11 +265,14 @@ any ['get', 'post'] => '/batch_pubmed/:user' => sub {
             # write result to $file_name
             # make path and file_name
             my $data_path = File::Spec->catdir('batch_pubmed_result',$user);
-            opendir(my $dir, $data_path);
-            @saved_data = readdir $dir;
-            @saved_data = map { substr $_, 0, -5 } grep { /json$/ } @saved_data;
+            my $dir;
+            opendir($dir, $data_path) or $dir = undef;
+            if ($dir) {
+                @saved_data = readdir $dir;
+                @saved_data = map { substr $_, 0, -5 } grep { /json$/ } @saved_data;
+            }
         }
-        @saved_data = sort @saved_data;
+        @saved_data = sort @saved_data if @saved_data;
         template 'tools_batch_pubmed.tt', {
             user        => $user,
             saved_data  => \@saved_data,
