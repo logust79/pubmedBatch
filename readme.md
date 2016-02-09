@@ -1,4 +1,4 @@
-# Light Weight Plasmid Drawer
+# pubmedBatch
 
 * To install, run install_dependent.sh first. (only work on Linux-based systems)
 * For multiple workers, please use `starman`: `starman --workers 10 -p 3000 -a bin/app.psgi`
@@ -6,6 +6,8 @@
 * After running, you can open your browser and visit the page by `localhost:5000/batch_pubmed/username`
 * Note that relevant data will be saved / fetched according to the username. The data are saved in `batch_pubmed_result/username`.
 * You can use the files in `testfiles` to play with it.
+
+**NOTE** Please follow NCBI policies. Try to avoid massive queries during States's busy times. Early mornings and weekends are good times for massive queries.
 
 ## Caveat
 
