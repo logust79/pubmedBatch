@@ -368,7 +368,7 @@ sub get_pred_score {
     # ref: https://github.com/plagnollab/DNASeq_pipeline/blob/master/GATK_v2/filtering.md
     my $row = shift;
     my $pred;
-    if ($row->{Func} =~ /splic/ or $row->{ExonicFunc} =~ /stop|frame|del|insert/){
+    if (($row->{Func} and $row->{Func} =~ /splic/) or ($row->{ExonicFunc} and $row->{ExonicFunc} =~ /stop|frame|del|insert/)){
         $pred = 1000;
     } else {
         for my $h (keys %$row){

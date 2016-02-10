@@ -198,7 +198,7 @@ function displayPubmedTable(data) {
         	if (i == 0){
         		// check filter first. Pass = green button, Fail = red, and dubious = yellow
         		var pData = d3.select(this.parentNode).datum();
-        		var filter = pData.FILTER;
+        		var filter = ('FILTER' in pData) ? pData.FILTER : 'PASS';
         		var col = '';
         		if (filter == 'PASS'){
         			col = 'success'; //green

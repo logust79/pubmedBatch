@@ -14,7 +14,7 @@
 * Searched result is automated saved under the `username`'s folder.
 * You can't change saved file names.
 * `del row` will delete row on the displayed data, but will not delete it from your file. So reloading the file will revive the deleted row. I can make it to delete the data permanently though.
-* You need to refresh the page to find any recently saved data.
+* You need to refresh the page to find any recently saved data in the left column.
 
 ## Future work
 
