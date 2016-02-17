@@ -8,14 +8,17 @@ use Dancer2;
 use POSIX qw(strftime);
 use Template;
 use Dancer2::Plugin::ProgressStatus;
+use Dancer2::Plugin::Database;
 use Bio::DB::EUtilities;
 use XML::LibXML;
 use Text::CSV;
 use File::Path qw(make_path);
 use Try::Tiny;
+use Data::Dumper;
 
 our $VERSION = '0.1';
-
+# getting pubmed result sqlite connection
+my $dbh = database('pubmedBatch');
 ##################
 # Route handler  #
 ##################
@@ -50,7 +53,6 @@ any ['get', 'post'] => '/batch_pubmed/:user' => sub {
         my $prog 	= start_progress_status({name => 'progress'});
         my %tokens 	= params;
         my $verbose = $tokens{verbose} ? 1 : 0; # control if pull out all results, instead of results with total pubmed score > 0
-        
         my $csv_file 	= upload('csv_upload');
         my $known_genes = $tokens{'known_genes'} ? upload('known_genes') : '';
         my $mask_genes	= $tokens{'mask_genes'} ? upload('mask_genes') : '';
@@ -71,7 +73,9 @@ any ['get', 'post'] => '/batch_pubmed/:user' => sub {
         
         # translate terms
         my @or = split ' ', $tokens{OR};
+        @or = sort @or;
         my @and = split ' ', $tokens{AND};
+        @and = sort @and;
         my @field_or = map {q(").$_.q(").q([All Fields])} @or;
         my @field_and = map {q(").$_.q(").q([Title/Abstract])} @and;
         my $smashed_or = join ' OR ', @field_or;
@@ -113,6 +117,19 @@ any ['get', 'post'] => '/batch_pubmed/:user' => sub {
             # get rid of all parentheses and their content
             $gene_name =~ s/\([^)]*\)?//;
             
+            
+            #######################################################
+            # first to see if it is searched.
+            #   If yes, copy result
+            #   elseif masked, pass
+            #   else
+            #       given($dbh) {
+            #           when in sqlite and up-to-date, get the pubmed result
+            #           when in sqlite and out-of-date, delete record, continue
+            #           default search pubmed
+            #######################################################
+            
+            
             if(exists $genes{$gene_name}){
                 # already queried, no need to wait.
                 warn $gene_name;
@@ -151,89 +168,104 @@ any ['get', 'post'] => '/batch_pubmed/:user' => sub {
                 $ha->{pred_score} = get_pred_score($ha);
                 push @output, $ha;
             } else {
-                my $eutil;
-                # ncbi might not respond. this will throw an error. catch and repeat it after 5 sec
-                
-                $eutil = Bio::DB::EUtilities->new(
-                -eutil      => 'esearch',
-                -term       => $gene_name.$smashed_terms,
-                -db         => 'pubmed',
-                -retmax     => 1000,
-                -email      => $tokens{email},
-                );
-                
-                my $err = 1;
-                my @ids;
-                while($err) {
-                    try {
-                        @ids = $eutil->get_ids;
-                        $err = 0;
-                    } catch {
-                        my $error = shift;
-                        warn $error;
-                        warn "sleep for 5 sec";
-                        sleep(5);
-                    };
-                }
-                
-                if (@ids){
-                    # has a positive hit. Change the first cell in the row to be 'bold'
-                    # first to check all the ids for validity
-                    my $results = scrutinise(ids =>\@ids, terms => \@or, email => $tokens{email});
-                    # populate %genes and %output
-                    $genes{$gene_name} = $results;
-                    
-                    # known genes?
-                    $genes{$gene_name}->{known} =  ($known_genes =~ /\b$gene_name\b/) ? 1 : 0;
-                    
-                    unless ($verbose or $genes{$gene_name}->{total_score}){
-                        # jump to next record if total score is 0
-                        next ;
-                    }
-                    splice @fields, $col_num + 1, 0, ($genes{$gene_name}, $genes{$gene_name}->{total_score});
-                    # add a placeholder for pred_score
-                    unshift @fields, 0;
-                    my $ha;
-                    for my $col (0..$#header){
-                        $ha->{$header[$col]} = $fields[$col];
-                    }
-                    # get pred score.
-                    my $pred = get_pred_score($ha);
-                    
-                    # pred score > cutoff?
-                    next unless ($verbose or $pred >= $tokens{pred});
-                    
-                    $ha->{pred_score} = $pred;
-                    push @output, $ha;
+                # first do a search on sqlite
+                my $now = time;
+                my $term = join '_', (uc $gene_name, lc(join ',', @or), lc(join ',', @and));
+                my ($saved) = $dbh->quick_select('pubmedBatch', { term => $term });
+                # now check if term is in there, up to date
+                my $status = 0; # 0 means in database, 1 means update, 2 means insert
+                if ($saved and ($now - $saved->{'time'} <= (config->{life})) ){
+                    # exist and up-to-date
+                    $genes{$gene_name} = from_json($saved->{result});
+                } elsif ($saved){
+                    # exist but not up-to-date
+                    $status = 1;
                 } else {
-                    # nothing exciting, just write
-                    
-                    # verbose?
-                    next unless $verbose;
-                    
-                    $genes{$gene_name} = {total_score => 0, results => []};
-                    
-                    # known genes?
-                    $genes{$gene_name}->{known} = ($known_genes =~ /\b$gene_name\b/) ? 1 : 0;
-                    
-                    splice @fields, $col_num + 1, 0, ($genes{$gene_name}, $genes{$gene_name}->{total_score});
-                    # add a placeholder for pred_score
-                    unshift @fields, 0;
-                    my $ha;
-                    for my $col (0..$#header){
-                        $ha->{$header[$col]} = $fields[$col];
-                    }
-                    # get pred score.
-                    my $pred = get_pred_score($ha);
-                    
-                    # pred score > cutoff?
-                    next unless ($verbose or $pred >= $tokens{pred});
-                    
-                    $ha->{pred_score} = $pred;
-                    push @output, $ha;
+                    # not in database
+                    $status = 2;
                 }
-                # seems there's a limit on how many (3) searhces can be done per second, so sleep for a little while
-                sleep(0.4);
+               
+                if ($status) {
+                    # need to do pubmed search
+                    my $eutil;
+                    # ncbi might not respond. this will throw an error. catch and repeat it after 5 sec
+                    
+                    $eutil = Bio::DB::EUtilities->new(
+                    -eutil      => 'esearch',
+                    -term       => $gene_name.$smashed_terms,
+                    -db         => 'pubmed',
+                    -retmax     => 1000,
+                    -email      => $tokens{email},
+                    );
+                    
+                    my $err = 1;
+                    my @ids;
+                    while($err) {
+                        try {
+                            @ids = $eutil->get_ids;
+                            $err = 0;
+                        } catch {
+                            my $error = shift;
+                            warn $error;
+                            warn "sleep for 5 sec";
+                            sleep(5);
+                        };
+                    }
+                    
+                    if (@ids){
+                        # has a positive hit. Change the first cell in the row to be 'bold'
+                        # first to check all the ids for validity
+                        my $results = scrutinise(ids =>\@ids, terms => \@or, email => $tokens{email});
+                        # populate %genes and %output
+                        $genes{$gene_name} = $results;
+                        
+                        # add result to the sqlite database
+                        if ($status == 1){
+                            $dbh->quick_update('pubmedBatch', { term => $term }, {result => to_json($results, {utf8 => 1}), 'time' => $now});
+                        } else {
+                            $dbh->quick_insert('pubmedBatch', { term => $term, result => to_json($results, {utf8 => 1}), 'time' => $now});
+                        }
+                        
+                    } else {
+                        # nothing exciting, just write
+                        
+                        # verbose?
+                        next unless $verbose;
+                        
+                        $genes{$gene_name} = {total_score => 0, results => []};
+                        
+                        if ($status == 1) {
+                            $dbh->quick_update('pubmedBatch', { term => $term }, {result => to_json($genes{$gene_name}, {utf8 => 1}), 'time' => $now});
+                        } else {
+                            $dbh->quick_insert('pubmedBatch', { term => $term, result => to_json($genes{$gene_name}, {utf8 => 1}), 'time' => $now});
+                        }
+                    }
+                    # seems there's a limit on how many (3) searhces can be done per second, so sleep for a little while
+                    sleep(0.4);
+                }
+                # known genes?
+                $genes{$gene_name}->{known} =  ($known_genes =~ /\b$gene_name\b/) ? 1 : 0;
+                
+                unless ($verbose or $genes{$gene_name}->{total_score}){
+                    # jump to next record if total score is 0
+                    next ;
+                }
+                splice @fields, $col_num + 1, 0, ($genes{$gene_name}, $genes{$gene_name}->{total_score});
+                # add a placeholder for pred_score
+                unshift @fields, 0;
+                my $ha;
+                for my $col (0..$#header){
+                    $ha->{$header[$col]} = $fields[$col];
+                }
+                # get pred score.
+                my $pred = get_pred_score($ha);
+                
+                # pred score > cutoff?
+                next unless ($verbose or $pred >= $tokens{pred});
+                
+                $ha->{pred_score} = $pred;
+                push @output, $ha;
+               
             }
             
             #update progress;
@@ -299,6 +331,12 @@ post '/batch_pubmed_del/:user/:file' => sub {
 
 post '/_run_status' => sub {
     
+};
+
+get '/test/:id' => sub {
+    my $id = params->{id};
+    my @saved = $dbh->quick_select('pubmedBatch', { id => $id });
+    return Dumper \@saved;
 };
 
 dance;

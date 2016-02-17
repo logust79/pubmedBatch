@@ -23,3 +23,11 @@ engines:
 plugins:
     ProgressStatus:
         dir:  "temp/dancer_progress"
+    Database:
+        connections:
+            pubmedBatch:
+                driver: "SQLite"
+                database: 'db/pubmedBatch.sqlite'
+# record life (in second)
+# currently keeps record for 14 days
+life: 1209600
