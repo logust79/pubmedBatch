@@ -14,10 +14,12 @@ use warnings;
 use DBI;
 
 my $dbh = DBI->connect(
-"dbi:SQLite:dbname=../db/pubmedBatch.sqlite",
-"",
-"",
-{ RaiseError => 1}
+    "dbi:SQLite:dbname=../db/pubmedBatch.sqlite",
+    "",
+    "",
+    { RaiseError => 1,
+      sqlite_unicode => 1,
+    }
 ) or die $DBI::errstr;
 $dbh->do("DROP TABLE IF EXISTS pubmedBatch");
 $dbh->do("CREATE TABLE pubmedBatch(id INTEGER PRIMARY KEY, term TEXT, result TEXT, time INTEGER)");

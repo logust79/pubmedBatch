@@ -28,6 +28,8 @@ plugins:
             pubmedBatch:
                 driver: "SQLite"
                 database: 'db/pubmedBatch.sqlite'
+                dbi_params:
+                    sqlite_unicode: 1
 # record life (in second)
 # currently keeps record for 14 days
 life: 1209600

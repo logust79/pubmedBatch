@@ -15,6 +15,7 @@ use Text::CSV;
 use File::Path qw(make_path);
 use Try::Tiny;
 use Data::Dumper;
+use JSON;
 
 our $VERSION = '0.1';
 # getting pubmed result sqlite connection
@@ -331,12 +332,6 @@ post '/batch_pubmed_del/:user/:file' => sub {
 
 post '/_run_status' => sub {
     
-};
-
-get '/test/:id' => sub {
-    my $id = params->{id};
-    my @saved = $dbh->quick_select('pubmedBatch', { id => $id });
-    return Dumper \@saved;
 };
 
 dance;
