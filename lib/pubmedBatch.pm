@@ -133,7 +133,6 @@ any ['get', 'post'] => '/batch_pubmed/:user' => sub {
             
             if(exists $genes{$gene_name}){
                 # already queried, no need to wait.
-                warn $gene_name;
                 unless ($verbose or $genes{$gene_name}->{total_score}){
                     # jump to next record if total score is 0
                     next ;

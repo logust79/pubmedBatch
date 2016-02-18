@@ -6,7 +6,6 @@
 
 ## Installation
 * To install, run install_dependent.sh first. (only work on Linux-based systems).
-* Then run `cd bin; perl make_database.pl` to make a SQLite database.
 * To change the life time of a query search, go to *config.yml* and change the value of `life` in seconds.
 * For multiple workers, please use `starman`: `starman --workers 10 -p 3000 -a bin/app.psgi`
 * Port default is 5000. You can change it in `bin/app.psgi`, `set port => 8080`. Not relevant if you use `starman`.

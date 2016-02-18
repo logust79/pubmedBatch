@@ -22,6 +22,10 @@ if [ $ver -ge 16 ] ; then
     cpanm File::Path
     cpanm XML::LibXML
     cpanm Text::CSV
+    cpanm DBI
+    cpanm DBD::SQLite
+    cpanm Dancer2::Plugin::Database
+    cd bin; perl make_database.pl; cd ..
 else
 	# not good. throw an error.
 	echo 'Error: Your perl version has to be at least 5.16.0. perl -v to check your perl version';
