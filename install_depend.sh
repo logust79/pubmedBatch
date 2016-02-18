@@ -9,6 +9,8 @@ ver=$(perl -v | awk '/version [0-9]+/ {print $6}' | awk '{print substr($0,0,2)}'
 if [ $ver -ge 16 ] ; then
 	# good. install prerequisite
 	sudo apt-get -qq update
+    sudo apt-get install libexpat1-dev # for XML::Parser
+    sudo apt-get install libxml2-dev # for XML-LibXML
 	cpan install App::cpanminus
 	cpanm BioPerl
     cpanm Bio::DB::EUtilities
@@ -17,7 +19,6 @@ if [ $ver -ge 16 ] ; then
 	cpanm Try::Tiny
 	cpanm File::Temp
 	cpanm Starman
-	cpanm JSON
     cpanm Dancer2::Plugin::ProgressStatus
     cpanm File::Path
     cpanm XML::LibXML

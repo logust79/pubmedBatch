@@ -47,6 +47,14 @@ hook before_template => sub {
     $tokens->{'jquery_ui'} = request->base. 'javascripts/jquery-ui.min.js';
 };
 
+get '' => sub {
+    redirect '/batch_pubmed';
+};
+
+get '/' => sub {
+    redirect '/batch_pubmed';
+};
+
 any ['get', 'post'] => '/batch_pubmed' => sub {
     my $root = 'batch_pubmed_result';
     if (request->method() eq 'POST'){
