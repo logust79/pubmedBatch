@@ -210,12 +210,12 @@
 									<div class='row'>
 										<div class='col-md-4'>
 											<div class='input-group'>
-												<div class="input-group-addon">AND</div><input type='text' name='AND' class='form-control' id='and' value='dominant'/>
+												<div class="input-group-addon">AND</div><input type='text' name='AND' class='form-control' id='and' value='[% and_value %]'/>
 											</div>
 										</div>
 										<div class='col-md-8'>
 											<div class='input-group'>
-												<div class="input-group-addon">OR</div><input type='text' name='OR' class='form-control' id='or' value='retina retinal retinitis blindness macula macular stargardt'/>
+												<div class="input-group-addon">OR</div><input type='text' name='OR' class='form-control' id='or' value='[% or_value %]'/>
 											</div>
 										</div>
 									</div>

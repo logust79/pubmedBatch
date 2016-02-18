@@ -30,21 +30,26 @@ hook before_template => sub {
     # Defining some commonly used urls in the templates.
     my $tokens = shift;
     
-    $tokens->{'home'} = uri_for('/batch_pubmed');
-    $tokens->{'about'} = uri_for('/batch_pubmed/about');
-    $tokens->{'css_url'} = request->base . 'css/style.css';
-    $tokens->{'main_css'} = request->base. 'css/main.css';
-    $tokens->{'main_js'} = request->base. 'javascripts/main.js';
-    $tokens->{'d3_js'} = request->base. 'javascripts/d3.min.js';
-    $tokens->{'j_dragtable'} = request->base. 'javascripts/jquery.dragtable.js';
-    $tokens->{'j_tablesorter'} = request->base. 'javascripts/jquery.tablesorter.js';
+    $tokens->{'home'}           = uri_for('/batch_pubmed');
+    $tokens->{'about'}          = uri_for('/batch_pubmed/about');
+    $tokens->{'css_url'}        = request->base . 'css/style.css';
+    $tokens->{'main_css'}       = request->base. 'css/main.css';
+    $tokens->{'main_js'}        = request->base. 'javascripts/main.js';
+    $tokens->{'d3_js'}          = request->base. 'javascripts/d3.min.js';
+    $tokens->{'j_dragtable'}    = request->base. 'javascripts/jquery.dragtable.js';
+    $tokens->{'j_tablesorter'}  = request->base. 'javascripts/jquery.tablesorter.js';
     #$tokens->{'bootstrap_css'} = request->base. 'css/bootstrap.min.css';
-    $tokens->{'bootstrap_css'} = '//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css';
-    #$tokens->{'bootstrap_js'} = request->base. 'javascripts/bootstrap.min.js';
-    $tokens->{'bootstrap_js'} = '//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js';
-    $tokens->{'jquery'} = 'https://code.jquery.com/jquery-2.2.0.min.js';
-    #$tokens->{'jquery'} = request->base. 'javascripts/jquery.min.js';
-    $tokens->{'jquery_ui'} = request->base. 'javascripts/jquery-ui.min.js';
+    $tokens->{'bootstrap_css'}  = '//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css';
+    #$tokens->{'bootstrap_js'}  = request->base. 'javascripts/bootstrap.min.js';
+    $tokens->{'bootstrap_js'}   = '//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js';
+    $tokens->{'jquery'}         = 'https://code.jquery.com/jquery-2.2.0.min.js';
+    #$tokens->{'jquery'}        = request->base. 'javascripts/jquery.min.js';
+    $tokens->{'jquery_ui'}      = request->base. 'javascripts/jquery-ui.min.js';
+    
+    # get AND and OR values from config
+    $tokens->{'and_value'}      = config->{fields}{AND};
+    $tokens->{'or_value'}       = config->{fields}{OR};
+    
 };
 
 get '' => sub {

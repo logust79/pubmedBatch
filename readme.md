@@ -12,6 +12,7 @@
 * Port default is 5000. You can change it in `bin/app.psgi`, `set port => 8080`. Not relevant if you use `starman`.
 * After running, you can open your browser and visit the page by `localhost:5000/batch_pubmed`.
 * Note that relevant data will be saved / fetched according to the username. The data are saved in `batch_pubmed_result/username`.
+* The prefilled fields (`AND` and `OR`) can be configured in `config.yml`.
 * You can use the files in `testfiles` to play with it.
 
 **NOTE** Please follow NCBI policies. Try to avoid massive queries during States's busy times. Early mornings and weekends are good times for massive queries.

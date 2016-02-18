@@ -30,6 +30,9 @@ plugins:
                 database: 'db/pubmedBatch.sqlite'
                 dbi_params:
                     sqlite_unicode: 1
+fields:
+    AND: "dominant"
+    OR: "retina retinal retinitis blindness macula macular stargardt"
 # record life (in second)
 # currently keeps record for 14 days
 life: 1209600
