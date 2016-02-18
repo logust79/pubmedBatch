@@ -217,7 +217,11 @@ function displayPubmedTable(data) {
         });
 	
 	$('#table-content').show();
-	$('#export').show();
+	$('#tablehead-div').show();
+	
+	//populate old-name field for renaming
+	$('#old-name').val(data[2]);
+	
 	//popover
 	$("[data-toggle='popover']").popover({html:true});
 	//sortable

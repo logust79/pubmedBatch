@@ -12,10 +12,12 @@ use Dancer2::Plugin::Database;
 use Bio::DB::EUtilities;
 use XML::LibXML;
 use Text::CSV;
-use File::Path qw(make_path);
+use File::Path qw(make_path remove_tree);
 use Try::Tiny;
 use Data::Dumper;
 use JSON;
+use File::Basename;
+use File::Copy;
 
 our $VERSION = '0.1';
 # getting pubmed result sqlite connection
@@ -28,6 +30,8 @@ hook before_template => sub {
     # Defining some commonly used urls in the templates.
     my $tokens = shift;
     
+    $tokens->{'home'} = uri_for('/batch_pubmed');
+    $tokens->{'about'} = uri_for('/batch_pubmed/about');
     $tokens->{'css_url'} = request->base . 'css/style.css';
     $tokens->{'main_css'} = request->base. 'css/main.css';
     $tokens->{'main_js'} = request->base. 'javascripts/main.js';
@@ -41,6 +45,64 @@ hook before_template => sub {
     $tokens->{'jquery'} = 'https://code.jquery.com/jquery-2.2.0.min.js';
     #$tokens->{'jquery'} = request->base. 'javascripts/jquery.min.js';
     $tokens->{'jquery_ui'} = request->base. 'javascripts/jquery-ui.min.js';
+};
+
+any ['get', 'post'] => '/batch_pubmed' => sub {
+    my $root = 'batch_pubmed_result';
+    if (request->method() eq 'POST'){
+        # Someone wants to create a user
+        my $user = params->{'create-user'};
+        if ($user){
+            my $data_path = File::Spec->catdir($root,$user);
+            
+            # make_path is like mkdir -p. Only create path when not exist
+            make_path($data_path, {verbose => 1});
+        }
+    }
+    # Get users (more like a folder)
+    # and create / delete users
+    
+    # list dir
+    opendir my $dh, $root or warn $!;
+    my @dirs = grep {-d "$root/$_" && ! /^\.{1,2}$/} readdir($dh);
+    template 'tools_main.tt', {
+        dirs => \@dirs,
+    };
+};
+
+get '/batch_pubmed/about' => sub {
+    template 'tools_about.tt';
+};
+
+post '/batch_pubmed/del' => sub {
+    # delete user
+    my $root = 'batch_pubmed_result';
+    my $user = params->{user};
+    if ($user){
+        my $data_path = File::Spec->catdir($root,$user);
+        remove_tree($data_path);
+        redirect uri_for('/batch_pubmed');
+    }else{
+        # the folder doesn't exist
+        send_error "User doesn't exist!", 404;
+    }
+};
+
+post '/batch_pubmed/rename/:user' => sub {
+    # rename record
+    my $user = params->{user};
+    my $new_name = params->{'new-name'}.'.json';
+    my $old_name = params->{'old-name'}.'.json';
+    my $root = 'batch_pubmed_result';
+    
+    my $new_file = File::Spec->catfile($root, $user, $new_name);
+    # new file already exists?
+    if (-f $new_file){
+        return '<b>ERROR:</b> Target file already exists! <br/> Rename failed!';
+    }
+    my $old_file = File::Spec->catfile($root, $user, $old_name);
+    move($old_file, $new_file);
+    return 'The file has been successfully renamed!';
 };
 
 any ['get', 'post'] => '/batch_pubmed/:user' => sub {
@@ -272,22 +334,35 @@ any ['get', 'post'] => '/batch_pubmed/:user' => sub {
             $prog->add_message("$row $gene_name score: ".$genes{$gene_name}->{total_score}) if $genes{$gene_name}->{total_score};
         }
         
-        my $result = to_json([\@header, \@output]);
-        
-        #logged in? can save result
+        # Can save result
         if ($user){
             # write result to $file_name
             # make path and file_name
+            my $result = to_json([\@header, \@output]);
             my $data_path = File::Spec->catdir('batch_pubmed_result',$user);
+            
+            # make_path is like mkdir -p. Only create path when not exist
             make_path($data_path, {verbose => 1});
-            $file_name = File::Spec->catfile($data_path, $file_name);
+            my $full_file_name = File::Spec->catfile($data_path, $file_name);
+            
+            # file exist? foo (1).json
+            my $num = 0;
+            while (-f $full_file_name){
+                $num++;
+                $full_file_name =~ s/(( \(\d+\))?).json/ ($num).json/;
+            }
             
             # write and win
-            open my $fh, '>', $file_name;
+            open my $fh, '>', $full_file_name;
             binmode $fh, ":encoding(UTF-8)";
             print $fh $result;
+            
+            # get the base name
+            ($file_name) = basename($full_file_name, '.json');
+            # and file name to the result
+            $result = to_json([\@header, \@output, $file_name]);
+            return $result;
         }
-        return $result;
     } else {
         # this is the get content
         
@@ -296,12 +371,17 @@ any ['get', 'post'] => '/batch_pubmed/:user' => sub {
         if ($user){
             # write result to $file_name
             # make path and file_name
+            my $root = 'batch_pubmed_result';
             my $data_path = File::Spec->catdir('batch_pubmed_result',$user);
             my $dir;
-            opendir($dir, $data_path) or $dir = undef;
-            if ($dir) {
-                @saved_data = readdir $dir;
-                @saved_data = map { substr $_, 0, -5 } grep { /json$/ } @saved_data;
+            if (-d $data_path){
+                opendir($dir, $data_path);
+                if ($dir) {
+                    @saved_data = readdir $dir;
+                    @saved_data = map { substr $_, 0, -5 } grep { /json$/ } @saved_data;
+                }
+            } else {
+                send_error "User doesn't exist!", 404;
             }
         }
         @saved_data = sort @saved_data if @saved_data;
@@ -328,6 +408,7 @@ post '/batch_pubmed_del/:user/:file' => sub {
     $file_name = File::Spec->catfile('batch_pubmed_result', $user, $file_name);
     unlink $file_name or return $!;
 };
+
 
 post '/_run_status' => sub {
     
@@ -386,7 +467,7 @@ sub scrutinise {
         }
         if ($score){
             my $t = $title ? $title->textContent : ''; my $ab = $abstract ? $abstract->textContent : '';
-            push $results->{results}, {id => $pmid, title => $t, abstract => $ab, score => $score};
+            push @{$results->{results}}, {id => $pmid, title => $t, abstract => $ab, score => $score};
         }
         $results->{total_score} += $score;
     }

@@ -122,7 +122,7 @@
 			  display: inline-block;
 			  border-radius: 50%;
 			}
-			div#progressbar, #export {
+			div#progressbar, #tablehead-div {
 				margin-top: 15px;
 				margin-bottom: 10px;
 				display: none;
@@ -130,7 +130,7 @@
 			#progress-text {
 				margin-top: 10px;
 			}
-			#export-div {
+			#tablehead-div {
 				margin-top: 15px;
 				margin-bottom: 15px;
 			}
@@ -175,6 +175,10 @@
 			<div class="col-sm-3 col-md-2 sidebar">
 			  <ul class="nav nav-sidebar">
 			  	<li class="active"><b>Saved data</b></li>
+			  	<form name="myform" method='POST' action="del">
+					<a href="javascript: warning()">Delete user</a>
+					<input type='hidden' name='user' value='[% user %]' />
+				</form>
 			  </ul>
 			  <ul class="nav nav-sidebar mini">
 			  	[% IF saved_data %]
@@ -245,18 +249,6 @@
 									</label>
 								</div>
 							</div>
-							<div class='col-md-2'>
-								<div class="form-group">
-									<br/>
-									<div style='margin-top: 10px'>
-										<a href='#' class='docPopover' title='Documentation'  data-placement='left' data-content='1. Verbose mode will give all data back. Non-verbose mode will only give back results with positive Pubmed score.<br/>
-		2. "OR" terms and the gene name will be queried to [All Fields], whereas "AND" terms will be queried to [Title/Abstract].<br/>
-		3. Pubmed score is calculated by the number of appearance of the "OR" terms in the [Title/Abstract] fields.<br/>
-		4. If the quality of the variance call is PASS, the "Del row" button is coloured green. If it is FAIL, the button is coloured red. Otherwise the button is yellow.<br/>
-		5. Pred score is calculated by considering the [*Pred] fields. [D/A].each = 10, [P].each = 5, [C].each = 6, [T/B/N].each = -1. If there is a splicing/insertion/deletion event, the score is set as 1000. Not given is set as 0'>Documentation</a>
-									</div>
-								</div>
-							</div>
 						</div><!--row-->
 						<div class='row'>
 							<div class='col-md-3'>
@@ -285,17 +277,62 @@
 				<div id="progressbar" class="progress progress-striped active">
 					<div class="progress-bar" style="width: 0%;"></div>
 				</div>
-				<div class='row' id='export-div'>
-					<div class='col-md-12'>
+				<div class='row' id='tablehead-div'>
+					<div class='col-md-2'>
 						<a href='#' id='export' type='button' class='btn btn-success'>Export to CSV</a>
 					</div>
+					<form class='form-inline' role='form' id='rename-form'>
+						<div class="form-group">
+							<input type="text" name='new-name' placeholder="rename" class="form-control" />
+						</div>
+						<input type='hidden' name='old-name' id='old-name' />
+						<button class='btn btn-success' type="submit" id='rename-submit' class="btn btn-default">Rename record</button>	
+					</form>
 				</div>
 				<div id='table-content'></div>
 				</div>
 			</div>
 		</div><!--main row-->
 	</div><!--container-->
- 
+ 	<!-- Modal -->
+ 	<!--warn to delete-->
+	<div class="modal fade" id="warning-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  		<div class="modal-dialog">
+    		<div class="modal-content">
+      			<div class="modal-header">
+        			<h4 class="modal-title" id="myModalLabel">Warning</h4>
+      			</div>
+      			<div class="modal-body">
+					<p>
+						Are you sure to delete this user? <b>[% user %]</b> might hate you...
+					</p>
+      			</div>
+      			<div class="modal-footer">
+      				<button type="button" class="btn btn-warning" data-dismiss="modal">Cancel</button>
+        			<button type="button" class="btn btn-success" data-dismiss="modal" id='proceed'>Proceed</button>
+      			</div>
+    		</div>
+  		</div>
+	</div>
+	<!--error to rename-->
+	<div class="modal fade" id="message-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  		<div class="modal-dialog">
+    		<div class="modal-content">
+      			<div class="modal-header">
+        			<h4 class="modal-title" id="myModalLabel">Message</h4>
+      			</div>
+      			<div class="modal-body">
+					<p id='message-p'>
+						
+					</p>
+      			</div>
+      			<div class="modal-footer">
+      				<button type="button" class="btn btn-default refresh" data-dismiss="modal">Okay</button>
+      			</div>
+    		</div>
+  		</div>
+	</div>
+	<!-- Modal -->
   <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
   <script src='[% jquery %]'></script>
   <!-- Include all compiled plugins (below), or include individual files -->
@@ -394,7 +431,7 @@
             },
             //Ajax events
             success: completeHandler = function(data) {
-            	// data[0] are titles, data[1] is the array of data.
+            	// data[0] are titles, data[1] is the array of data. data[2] is the file name
             	//console.log(data);
             	//show submit button
  				$('#submit').show(); 
@@ -439,9 +476,24 @@
 			
 			//highlight selection
 			th.parent().addClass('active');
+			
+			//populate file name in the renaming form
+			$('#old-name').val(file);
 		});
 	});
+	
+	//rename 
+	$('#rename-submit').on('click', function(e){
+		e.preventDefault();
+		$.post('/batch_pubmed/rename/[% user %]', 
+			$('#rename-form').serialize(),
+			function(data, status) {
+				$("#message-p").html(data);
+				$('#message-modal').modal('show');
+        });
+	});
 
+	
  	//del saved data
  	$('.del').on('click', function(){
  		var th = $(this);
@@ -455,6 +507,23 @@
  			}
  		});
  	});
+ 	//-->
+ 	
+ 	//warning to del user
+ 	function warning(){
+  		$('#warning-modal').modal('show');
+	}
+ 	
+ 	//del user
+ 	$('#proceed').on('click', function (){
+	  	document.myform.submit();
+	});
+	
+	//refresh the page
+	$('.refresh').on('click', function (){
+		location.reload();
+	});
+	
   </script>
   
  </body>
