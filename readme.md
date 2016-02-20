@@ -2,7 +2,7 @@
 
 ## What it does
 * Search gene terms associated with phenotypes **in batch** on Pubmed. The gene terms shall be grouped in a column in a csv file. 
-* In order to speed up the query, and to reduce the Pubmed query frequency, the app saves each unique searches in its SQLite database for 14 days (which can be changed. See **Installation**).
+* In order to speed up the query, and to reduce the Pubmed query frequency, the app saves each unique searches in its SQLite database for 14 days (this can be changed. See **Installation**).
 
 ## Installation
 * To install, run `install_dependent.sh` first (only work on Linux-based systems)
@@ -24,5 +24,6 @@
 * You need to refresh the page to find any recently saved data in the left column.
 * Pubmed doesn't want to be harassed too frequently in busy times, so try to use it for massive queries in US night times and weekends.
 
-## Future work
+## Disclaimer
+This work contributes to the UK Inherited Retinal Dystrophy Consortium.
 
