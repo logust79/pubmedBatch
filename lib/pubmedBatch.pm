@@ -161,10 +161,17 @@ any ['get', 'post'] => '/batch_pubmed/:user' => sub {
             $smashed_terms .= ' AND '.$smashed_and;
         }
         my $col_num = $tokens{column};
+        
+        # Treat csv_file as a file handle and read it with $csv->getline.
+        # Sometimes when the file is opened by Excel, it messes up the eol of the file,
+        #  and only $csv->getline can save the world.
+        open my $fake_fh, '<', \$csv_file;
+        
+        my $csv = Text::CSV->new({ binary => 1});
+        
         # grep the header
-        my ($header_line) = ($csv_file =~ /^(.*)?\n/);
-        $header_line =~ s/"//g; #get rid of "
-        my @header = split ',', $header_line;
+        my $header_line = $csv->getline($fake_fh);
+        my @header = @$header_line;
         
         # add another 2 column right after HUGO
         splice @header, $col_num + 1, 0, ('ref(pubmedID)', 'pubmed_score');
@@ -175,16 +182,14 @@ any ['get', 'post'] => '/batch_pubmed/:user' => sub {
         #################################################################################
         # Now's the real deal
         #################################################################################
-        my $csv = Text::CSV->new({ binary => 1, eol => $/ });
         my $row = -1;
         my %genes;
         my @output;
-        while ($csv_file =~ /^(.*?\n)/mg){
+        while (my $fields = $csv->getline($fake_fh)){
             # parse line. skip first line.
             $row++;
-            $row or next;
-            my $status = $csv->parse($1);
-            $status and my @fields = $csv->fields();
+            #$row or next;
+            my @fields = @$fields;
             my $gene_name = $fields[$col_num];
             #update progress;
             $prog++;
